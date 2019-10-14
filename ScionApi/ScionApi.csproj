@@ -238,6 +238,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\Auth0Config.cs" />
+    <Compile Include="App_Start\WinConfig.cs" />
     <Compile Include="Auth0\OAuthDetails.cs" />
     <Compile Include="Auth0\ScopeAuthorizeAttribute.cs" />
     <Compile Include="Controllers\WebhooksController.cs" />

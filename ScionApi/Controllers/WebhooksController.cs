@@ -60,13 +60,14 @@ namespace ScionApi.Controllers
 			var request = new RestRequest(Method.POST);
 			request.AddHeader("content-type", "application/json");
 
-			string body = JsonConvert.SerializeObject(webHook);  
+			string body = JsonConvert.SerializeObject(webHook);
+
 
 			request.AddParameter("application/json",
 				body
 				, ParameterType.RequestBody);
 
-			request.AddParameter("Authorization", Request.Headers.Authorization, ParameterType.HttpHeader);
+			//request.AddParameter("Authorization", Request.Headers.Authorization, ParameterType.HttpHeader);
 
 			IRestResponse response = client.Execute(request);
 

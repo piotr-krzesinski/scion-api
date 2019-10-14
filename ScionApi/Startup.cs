@@ -26,7 +26,8 @@ namespace ScionApi
 	{
 		public void Configuration(IAppBuilder appBuilder)
 		{
-			ConfigureAuth0(appBuilder);
+			//ConfigureAuth0(appBuilder);
+			ConfigureWindowsAuth(appBuilder);
 
 			var builder = new ContainerBuilder();
 			var config = new HttpConfiguration();
