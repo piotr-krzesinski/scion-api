@@ -1,20 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
-using System.Web.Http.Results;
 using Microsoft.AspNet.WebHooks;
-using Microsoft.AspNet.WebHooks.Controllers;
-using Microsoft.AspNet.WebHooks.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
-using ScionApi.Auth0;
 using ScionApi.Providers;
 
 namespace ScionApi.Controllers
@@ -23,8 +16,6 @@ namespace ScionApi.Controllers
 	[RoutePrefix("api/webhooks")]
 	public class WebhooksController : ApiController
 	{
-		private OAuthDetails AccessDetails { get; set; }
-
 		private IWebHookStore _webHookStore;
 		private IWebHookFilterProvider _filterProvider;
 		
@@ -43,56 +34,54 @@ namespace ScionApi.Controllers
 		}
 
 		[HttpGet]
-		[Route("create")]
-		public IHttpActionResult Create()
+		[Route("getUserInfo")]
+		public JObject UserInfo()
 		{
-			string baseAddress = "http://localhost:9000/";
+			var url = $"https://{ConfigurationManager.AppSettings["Auth0Domain"]}/userInfo";
 
-			var webHook = new WebHook()
-			{
-				Description = "My Webhook",
-				Secret = "12345678901234567890123456789012",
-				Id = Guid.NewGuid().ToString(),
-				WebHookUri = new Uri("https://localhost:44354/api/webhooks/incoming/scion")
-			};
+			var client = new RestClient(new Uri(url));
+			var request = new RestRequest(Method.GET);
 
-			var client = new RestClient($"{baseAddress}/api/webhooks/registrations");
-			var request = new RestRequest(Method.POST);
-			request.AddHeader("content-type", "application/json");
+			//add GetToken() API method parameters
+			request.Parameters.Clear();
+			request.AddHeader("Authorization", Request.Headers.Authorization.ToString());
+			request.AddHeader("Accept", "application/xml");
+			
+			//make the API request and get the response
+			IRestResponse response = client.Execute<JObject>(request);
 
-			string body = JsonConvert.SerializeObject(webHook);
+			dynamic jsonResponse = JsonConvert.DeserializeObject(response.Content);
 
+			return jsonResponse;
+		}
 
-			request.AddParameter("application/json",
-				body
-				, ParameterType.RequestBody);
+		[HttpPost]
+		[Route("create")]
+		public  async Task<IHttpActionResult> Create([FromBody]WebHook webHook)
+		{
+			
+			await _webHookStore.InsertWebHookAsync(RequestContext.Principal.Identity.Name, webHook);
 
-			//request.AddParameter("Authorization", Request.Headers.Authorization, ParameterType.HttpHeader);
-
-			IRestResponse response = client.Execute(request);
-
-			if (response.StatusCode == HttpStatusCode.Created)
-			{
-				var webHookToReturn =  _webHookStore.LookupWebHookAsync(RequestContext.Principal.Identity.Name, webHook.Id);
-
-				return  CreatedAtRoute("RegistrationLookupAction", new {id = webHook.Id}, webHookToReturn);
-			}
-
-			return new ResponseMessageResult(
-				Request.CreateErrorResponse(        
-					response.StatusCode,
-					new HttpError(response.ErrorMessage)
-				)
-			);
+			return CreatedAtRoute("RegistrationLookupAction", new {id = webHook.Id}, webHook);
 		}
 
 
 
 		[HttpGet]
 		[Route("trigger")]
-		public async Task<int> Trigger()
+		public async Task<string> Trigger()
 		{
-			return await this.NotifyAllAsync(ScionFilterProvider.Event1, new {Message = "Event 'event1' has been triggered"});
+			string filter = "111111111";
+
+			int notified = await this.NotifyAllAsync(ScionFilterProvider.Event1, new {Message = "Event 'event1' has been triggered"},
+				(hook, s) =>
+				{
+					bool result = Equals(hook.Properties["originatorId"], filter);
+
+					return result;
+				});
+
+			return $"Webhooks notified: {notified}";
 		}
 		
 		[Route("registrations/{id}/filters")]
@@ -102,8 +91,7 @@ namespace ScionApi.Controllers
 			if (webHook != null)
 			{
 				var filters = await _filterProvider.GetFiltersAsync();
-
-
+				
 				return Ok(filters.Where(x => webHook.Filters.Any(f => f.Equals(x.Name))));
 			}
 

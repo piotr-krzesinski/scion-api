@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Diagnostics;
@@ -26,8 +27,9 @@ namespace ScionApi
 	{
 		public void Configuration(IAppBuilder appBuilder)
 		{
-			//ConfigureAuth0(appBuilder);
-			ConfigureWindowsAuth(appBuilder);
+			ConfigureAuth0(appBuilder);
+			
+			//ConfigureWindowsAuth(appBuilder);
 
 			var builder = new ContainerBuilder();
 			var config = new HttpConfiguration();
@@ -69,9 +71,7 @@ namespace ScionApi
 
 			appBuilder.UseAutofacMiddleware(container);
 			appBuilder.UseAutofacWebApi(config);
-
-			//appBuilder.UseJwtBearerAuthentication()
-
+			
 			appBuilder.UseCors(CorsOptions.AllowAll);
 			appBuilder.UseWebApi(config);
 		}
